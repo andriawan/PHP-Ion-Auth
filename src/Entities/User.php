@@ -26,16 +26,20 @@ class User
             $user = $this->where($this->config->get('identity'), $identity)->users()->row(
             ); //changed to get_user_by_identity from email
 
-            if ($user) {
+            if ($user)
+            {
                 $data = array(
                     'identity' => $user->{$this->config->get('identity')},
                     'forgotten_password_code' => $user->forgottenPasswordCode
                 );
 
-                if (!$this->config->get('useDefaultEmail')) {
+                if (!$this->config->get('useDefaultEmail'))
+                {
                     $this->setMessage('forgotPasswordSuccessful');
                     return $data;
-                } else {
+                }
+                else
+                {
                     $message = $this->load->view(
                         $this->config->get('emailTemplates') . $this->config->get('emailForgotPassword'),
                         $data,
@@ -49,19 +53,26 @@ class User
                     );
                     $this->email->message($message);
 
-                    if ($this->email->send()) {
+                    if ($this->email->send())
+                    {
                         $this->setMessage('forgotPasswordSuccessful');
                         return true;
-                    } else {
+                    }
+                    else
+                    {
                         $this->setError('forgotPasswordUnsuccessful');
                         return false;
                     }
                 }
-            } else {
+            }
+            else
+            {
                 $this->setError('forgotPasswordUnsuccessful');
                 return false;
             }
-        } else {
+        }
+        else
+        {
             $this->setError('forgotPasswordUnsuccessful');
             return false;
         }
@@ -81,7 +92,8 @@ class User
         $identity = $this->config->get('identity');
         $profile = $this->where('forgotten_password_code', $code)->users()->row(); //pass the code to profile
 
-        if (!$profile) {
+        if (!$profile)
+        {
             $this->ionAuthModel->triggerEvents(array('postPasswordChange', 'passwordChangeUnsuccessful'));
             $this->setError('passwordChangeUnsuccessful');
             return false;
@@ -89,17 +101,21 @@ class User
 
         $newPassword = $this->ionAuthModel->forgottenPasswordComplete($code, $profile->salt);
 
-        if ($newPassword) {
+        if ($newPassword)
+        {
             $data = array(
                 'identity' => $profile->{$identity},
                 'new_password' => $newPassword
             );
 
-            if (!$this->config->get('useDefaultEmail')) {
+            if (!$this->config->get('useDefaultEmail'))
+            {
                 $this->setMessage('passwordChangeSuccessful');
                 $this->ionAuthModel->triggerEvents(array('postPasswordChange', 'passwordChangeSuccessful'));
                 return $data;
-            } else {
+            }
+            else
+            {
                 $message = $this->load->view(
                     $this->config->get('emailTemplates') . $this->config->get('emailForgotPasswordComplete'),
                     $data,
@@ -114,11 +130,14 @@ class User
                 );
                 $this->email->message($message);
 
-                if ($this->email->send()) {
+                if ($this->email->send())
+                {
                     $this->setMessage('passwordChangeSuccessful');
                     $this->ionAuthModel->triggerEvents(array('postPasswordChange', 'passwordChangeSuccessful'));
                     return true;
-                } else {
+                }
+                else
+                {
                     $this->setError('passwordChangeUnsuccessful');
                     $this->ionAuthModel->triggerEvents(array('postPasswordChange', 'passwordChangeUnsuccessful'));
                     return false;
@@ -143,14 +162,19 @@ class User
     {
         $profile = $this->where('forgotten_password_code', $code)->users()->row(); //pass the code to profile
 
-        if (!is_object($profile)) {
+        if (!is_object($profile))
+        {
             $this->setError('passwordChangeUnsuccessful');
             return false;
-        } else {
-            if ($this->config->get('forgotPasswordExpiration') > 0) {
+        }
+        else
+        {
+            if ($this->config->get('forgotPasswordExpiration') > 0)
+            {
                 //Make sure it isn't expired
                 $expiration = $this->config->get('forgotPasswordExpiration');
-                if (time() - $profile->forgotten_password_time > $expiration) {
+                if (time() - $profile->forgotten_password_time > $expiration)
+                {
                     //it has expired
                     $this->clearForgottenPasswordCode($code);
                     $this->setError('passwordChangeUnsuccessful');
@@ -166,9 +190,9 @@ class User
     /**
      * register()
      * -----------------------------
-     * @param $username, string
-     * @param $password, string
-     * @param $email, string
+     * @param $username , string
+     * @param $password , string
+     * @param $email , string
      * @param array $additionalData
      * @param array $groupIds
      * @return void
@@ -186,28 +210,36 @@ class User
 
         $emailActivation = $this->config->get('emailActivation');
 
-        if (!$emailActivation) {
+        if (!$emailActivation)
+        {
             $id = $this->ionAuthModel->register($username, $password, $email, $additionalData, $groupIds);
-            if ($id !== false) {
+            if ($id !== false)
+            {
                 $this->setMessage('accountCreationSuccessful');
                 $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationSuccessful'));
                 return $id;
-            } else {
+            }
+            else
+            {
                 $this->setError('accountCreationUnsuccessful');
                 $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationUnsuccessful'));
                 return false;
             }
-        } else {
+        }
+        else
+        {
             $id = $this->ionAuthModel->register($username, $password, $email, $additionalData, $groupIds);
 
-            if (!$id) {
+            if (!$id)
+            {
                 $this->setError('accountCreationUnsuccessful');
                 return false;
             }
 
             $deactivate = $this->ionAuthModel->deactivate($id);
 
-            if (!$deactivate) {
+            if (!$deactivate)
+            {
                 $this->setError('deactivateUnsuccessful');
                 $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationUnsuccessful'));
                 return false;
@@ -224,13 +256,16 @@ class User
                 'activation' => $activationCode,
             );
 
-            if (!$this->config->get('useDefaultEmail')) {
+            if (!$this->config->get('useDefaultEmail'))
+            {
                 $this->ionAuthModel->triggerEvents(
                     array('postAccountCreation', 'postAccountCreationSuccessful', 'activationEmailSuccessful')
                 );
                 $this->setMessage('activationEmailSuccessful');
                 return $data;
-            } else {
+            }
+            else
+            {
                 $message = $this->load->view(
                     $this->config->get('emailTemplates') . $this->config->get('emailActivate'),
                     $data,
@@ -245,7 +280,8 @@ class User
                 );
                 $this->email->message($message);
 
-                if ($this->email->send() == true) {
+                if ($this->email->send() == true)
+                {
                     $this->ionAuthModel->triggerEvents(
                         array('postAccountCreation', 'postAccountCreationSuccessful', 'activationEmailSuccessful')
                     );
@@ -282,11 +318,13 @@ class User
         );
 
         // delete the remember me cookies if they exist
-        if ($this->ionAuthModel->getCookie('identity')) {
+        if ($this->ionAuthModel->getCookie('identity'))
+        {
             $this->ionAuthModel->deleteCookie('identity');
         }
 
-        if ($this->ionAuthModel->getCookie('remember_code')) {
+        if ($this->ionAuthModel->getCookie('remember_code'))
+        {
             $this->ionAuthModel->deleteCookie('remember_code');
         }
 
@@ -320,7 +358,8 @@ class User
     {
         $userId = $_SESSION['userId'];
 
-        if (!empty($userId)) {
+        if (!empty($userId))
+        {
             return $userId;
         }
 
@@ -361,29 +400,36 @@ class User
 
         $id || $id = $_SESSION['user_id'];
 
-        if (!is_array($checkGroup)) {
+        if (!is_array($checkGroup))
+        {
             $checkGroup = array($checkGroup);
         }
 
-        if (isset($this->_cacheUserInGroup[$id])) {
+        if (isset($this->_cacheUserInGroup[$id]))
+        {
             $groups_array = $this->_cacheUserInGroup[$id];
-        } else {
+        }
+        else
+        {
             $usersGroups = $this->ionAuthModel->getUsersGroups($id);
             $groupsArray = array();
-            foreach ($usersGroups as $group) {
+            foreach ($usersGroups as $group)
+            {
                 $groupsArray[$group->id] = $group->name;
             }
             $this->_cacheUserInGroup[$id] = $groupsArray;
         }
 
-        foreach ($checkGroup as $key => $value) {
+        foreach ($checkGroup as $key => $value)
+        {
             $groups = (is_string($value)) ? $groupsArray : array_keys($groupsArray);
 
             /**
              * if !all (default), in_array
              * if all, !in_array
              */
-            if (in_array($value, $groups) xor $checkAll) {
+            if (in_array($value, $groups) xor $checkAll)
+            {
                 /**
                  * if !all (default), true
                  * if all, false
@@ -419,7 +465,8 @@ class User
     {
         $this->triggerEvents('pre_activate');
 
-        if ($code !== false) {
+        if ($code !== false)
+        {
             $query = $this->db->select($this->identityColumn)
                 ->where('activation_code', $code)
                 ->take(1)
@@ -427,7 +474,8 @@ class User
 
             $result = $query->first();
 
-            if (count($query) !== 1) {
+            if (count($query) !== 1)
+            {
                 $this->triggerEvents(array('postActivate', 'postActivateUnsuccessful'));
                 $this->setError('activateUnsuccessful');
                 return false;
@@ -442,7 +490,9 @@ class User
 
             $this->triggerEvents('extraWhere');
             $this->db->update($this->tables['users'], $data, array($this->identityColumn => $identity));
-        } else {
+        }
+        else
+        {
             $data = array(
                 'activation_code' => null,
                 'active' => 1
@@ -454,10 +504,13 @@ class User
         }
 
 
-        if ($this->db->affected_rows() == 1) {
+        if ($this->db->affected_rows() == 1)
+        {
             $this->triggerEvents(array('postActivate', 'postActivateSuccessful'));
             $this->setMessage('activateSuccessful');
-        } else {
+        }
+        else
+        {
             $this->triggerEvents(array('postActivate', 'postActivateUnsuccessful'));
             $this->setError('activateUnsuccessful');
         }
@@ -477,7 +530,8 @@ class User
     {
         $this->triggerEvents('deactivate');
 
-        if (!isset($id)) {
+        if (!isset($id))
+        {
             $this->setError('deactivateUnsuccessful');
             return false;
         }
@@ -494,9 +548,12 @@ class User
         $this->db->update($this->tables['users'], $data, array('id' => $id));
 
         $return = $this->db->affected_rows() == 1;
-        if ($return) {
+        if ($return)
+        {
             $this->setMessage('deactivateSuccessful');
-        } else {
+        }
+        else
+        {
             $this->setError('deactivateUnsuccessful');
         }
 
@@ -507,13 +564,15 @@ class User
     public function clearForgottenPasswordCode($code)
     {
 
-        if (empty($code)) {
+        if (empty($code))
+        {
             return false;
         }
 
         $this->db->where('forgottenPasswordCode', $code);
 
-        if ($this->db->count_all_results($this->tables['users']) > 0) {
+        if ($this->db->count_all_results($this->tables['users']) > 0)
+        {
             $data = array(
                 'forgottenPasswordCode' => null,
                 'forgottenPasswordTime' => null
@@ -538,7 +597,8 @@ class User
 
         $this->triggerEvents('preChangePassword');
 
-        if (!$this->identityCheck($identity)) {
+        if (!$this->identityCheck($identity))
+        {
             $this->triggerEvents(array('postChangePassword', 'postChangePasswordUnsuccessful'));
             return false;
         }
@@ -550,7 +610,8 @@ class User
             ->take(1)
             ->get($this->tables['users']);
 
-        if (count($query) !== 1) {
+        if (count($query) !== 1)
+        {
             $this->triggerEvents(array('postChangePassword', 'postChangePasswordUnsuccessful'));
             $this->setError('passwordChangeUnsuccessful');
             return false;
@@ -573,10 +634,13 @@ class User
         $this->db->update($this->tables['users'], $data, array($this->identityColumn => $identity));
 
         $return = $this->db->affected_rows() == 1;
-        if ($return) {
+        if ($return)
+        {
             $this->triggerEvents(array('postChangePassword', 'postChangePasswordSuccessful'));
             $this->setMessage('passwordChangeSuccessful');
-        } else {
+        }
+        else
+        {
             $this->triggerEvents(array('postChangePassword', 'postChangePasswordUnsuccessful'));
             $this->setError('passwordChangeUnsuccessful');
         }
@@ -603,7 +667,8 @@ class User
             ->take(1)
             ->get($this->tables['users']);
 
-        if (count($query) !== 1) {
+        if (count($query) !== 1)
+        {
             $this->triggerEvents(array('postChangePassword', 'postChangePasswordUnsuccessful'));
             $this->setError('passwordChangeUnsuccessful');
             return false;
@@ -613,7 +678,8 @@ class User
 
         $oldPasswordMatches = $this->hashPasswordDb($user->id, $old);
 
-        if ($oldPasswordMatches === true) {
+        if ($oldPasswordMatches === true)
+        {
             //store the new password and reset the remember code so all remembered instances have to re-login
             $hashedNewPassword = $this->hashPassword($new, $user->salt);
             $data = array(
@@ -628,10 +694,13 @@ class User
                 $data,
                 array($this->identityColumn => $identity)
             );
-            if ($successfullyChangedPasswordInDb) {
+            if ($successfullyChangedPasswordInDb)
+            {
                 $this->triggerEvents(array('postChangePassword', 'postChangePassword_Successful'));
                 $this->setMessage('passwordChangeSuccessful');
-            } else {
+            }
+            else
+            {
                 $this->triggerEvents(array('postChangePassword', 'postChangePasswordUnsuccessful'));
                 $this->setError('passwordChangeUnsuccessful');
             }
@@ -653,7 +722,8 @@ class User
     {
         $this->triggerEvents('usernameCheck');
 
-        if (empty($username)) {
+        if (empty($username))
+        {
             return false;
         }
 
@@ -673,7 +743,8 @@ class User
     {
         $this->triggerEvents('email_check');
 
-        if (empty($email)) {
+        if (empty($email))
+        {
             return false;
         }
 
@@ -693,7 +764,8 @@ class User
     {
         $this->triggerEvents('identity_check');
 
-        if (empty($identity)) {
+        if (empty($identity))
+        {
             return false;
         }
 
@@ -711,18 +783,21 @@ class User
      **/
     public function _forgottenPassword($identity)
     {
-        if (empty($identity)) {
+        if (empty($identity))
+        {
             $this->triggerEvents(array('postForgottenPassword', 'postForgottenPasswordUnsuccessful'));
             return false;
         }
 
         //All some more randomness
         $activationCodePart = "";
-        if (function_exists("openssl_random_pseudo_bytes")) {
+        if (function_exists("openssl_random_pseudo_bytes"))
+        {
             $activationCodePart = openssl_random_pseudo_bytes(128);
         }
 
-        for ($i = 0; $i < 1024; $i++) {
+        for ($i = 0; $i < 1024; $i++)
+        {
             $activationCodePart = sha1($activationCodePart . mt_rand() . microtime());
         }
 
@@ -741,9 +816,12 @@ class User
 
         $return = $this->db->affected_rows() == 1;
 
-        if ($return) {
+        if ($return)
+        {
             $this->triggerEvents(array('postForgottenPassword', 'postForgottenPasswordSuccessful'));
-        } else {
+        }
+        else
+        {
             $this->triggerEvents(array('postForgottenPassword', 'postForgottenPasswordUnsuccessful'));
         }
 
@@ -760,19 +838,23 @@ class User
     {
         $this->triggerEvents('preForgottenPasswordComplete');
 
-        if (empty($code)) {
+        if (empty($code))
+        {
             $this->triggerEvents(array('postForgottenPasswordComplete', 'postForgottenPasswordCompleteUnsuccessful'));
             return false;
         }
 
         $profile = $this->where('forgottenPasswordCode', $code)->users()->first(); //pass the code to profile
 
-        if ($profile) {
+        if ($profile)
+        {
 
-            if ($this->config->get('forgotPasswordExpiration') > 0) {
+            if ($this->config->get('forgotPasswordExpiration') > 0)
+            {
                 //Make sure it isn't expired
                 $expiration = $this->config->get('forgotPasswordExpiration');
-                if (time() - $profile->forgotten_password_time > $expiration) {
+                if (time() - $profile->forgotten_password_time > $expiration)
+                {
                     //it has expired
                     $this->setError('forgotPasswordExpired');
                     $this->triggerEvents(
@@ -812,19 +894,25 @@ class User
 
         $manualActivation = $this->config->get('manual_activation');
 
-        if ($this->identityColumn == 'email' && $this->emailCheck($email)) {
+        if ($this->identityColumn == 'email' && $this->emailCheck($email))
+        {
             $this->setError('accountCreationDuplicate_email');
             return false;
-        } elseif ($this->identityColumn == 'username' && $this->usernameCheck($username)) {
+        }
+        elseif ($this->identityColumn == 'username' && $this->usernameCheck($username))
+        {
             $this->setError('accountCreationDuplicateUsername');
             return false;
         }
 
         // If username is taken, use username1 or username2, etc.
-        if ($this->identityColumn != 'username') {
+        if ($this->identityColumn != 'username')
+        {
             $originalUsername = $username;
-            for ($i = 0; $this->usernameCheck($username); $i++) {
-                if ($i > 0) {
+            for ($i = 0; $this->usernameCheck($username); $i++)
+            {
+                if ($i > 0)
+                {
                     $username = $originalUsername . $i;
                 }
             }
@@ -846,7 +934,8 @@ class User
             'active' => ($manualActivation === false ? 1 : 0)
         );
 
-        if ($this->store_salt) {
+        if ($this->store_salt)
+        {
             $data['salt'] = $salt;
         }
 
@@ -860,9 +949,11 @@ class User
 
         $id = $this->db->insert_id();
 
-        if (!empty($groups)) {
+        if (!empty($groups))
+        {
             //add to groups
-            foreach ($groups as $group) {
+            foreach ($groups as $group)
+            {
                 $this->addToGroup($group, $id);
             }
         }
@@ -873,7 +964,8 @@ class User
                     $defaultGroup->id,
                     $groups
                 ))
-        ) {
+        )
+        {
             $this->addToGroup($defaultGroup->id, $id);
         }
 
@@ -892,7 +984,8 @@ class User
     {
         $this->triggerEvents('preLogin');
 
-        if (empty($identity) || empty($password)) {
+        if (empty($identity) || empty($password))
+        {
             $this->setError('loginUnsuccessful');
             return false;
         }
@@ -916,7 +1009,8 @@ class User
             ->take(1);
 
 
-        if ($this->isTimeLockedOut($identity)) {
+        if ($this->isTimeLockedOut($identity))
+        {
             //Hash something anyway, just to take up time
             $this->hashPassword($password);
 
@@ -929,15 +1023,18 @@ class User
 
         $user = $query->first();
 
-        if (isset($user) === true) {
+        if (isset($user) === true)
+        {
 
             echo 'here:';
             var_dump($user->id, $password);
             $password = $this->hashPasswordDb($user->id, $password);
 
             echo '------';
-            if ($password === true) {
-                if ($user->active == 0) {
+            if ($password === true)
+            {
+                if ($user->active == 0)
+                {
                     $this->triggerEvents('post_login_unsuccessful');
                     $this->setError('login_unsuccessful_not_active');
 
@@ -950,7 +1047,8 @@ class User
 
                 $this->clearLoginAttempts($identity);
 
-                if ($remember && $this->config->get('remember_users')) {
+                if ($remember && $this->config->get('remember_users'))
+                {
                     $this->rememberUser($user->id);
                 }
 
@@ -981,9 +1079,11 @@ class User
      **/
     public function isMaxLoginAttemptsExceeded($identity)
     {
-        if ($this->config->get('trackLoginAttempts')) {
+        if ($this->config->get('trackLoginAttempts'))
+        {
             $maxAttempts = $this->config->get('maximumLoginAttempts');
-            if ($maxAttempts > 0) {
+            if ($maxAttempts > 0)
+            {
                 $attempts = $this->getAttemptsNum($identity);
                 return $attempts >= $maxAttempts;
             }
@@ -992,38 +1092,12 @@ class User
     }
 
     /**
-     * Function: getAttemptsNum()
-     * ------------------------------------------------------------------------------------
-     * Get number of attempts to login occured from given IP-address or identity
-     * Based on code from Tank Auth, by Ilya Konyukhov (https://github.com/ilkon/Tank-Auth)
-     *
-     * @param    string $identity
-     * @return    int
-     */
-    function getAttemptsNum($identity)
-    {
-        if ($this->config->get('trackLoginAttempts')) {
-            $ipAddress = $this->_prepareIp($_SERVER['REMOTE_ADDR']);
-
-            $this->db->select('1', false);
-            $this->db->where('ip_address', $ipAddress);
-            if (strlen($identity) > 0) {
-                $this->db->or_where('login', $identity);
-            }
-
-            $qres = $this->db->get($this->tables['loginAttempts']);
-            return count($qres);
-        }
-        return 0;
-    }
-
-    /**
      * Function is TimeLockedOut()
      * ---------------------------------------------------------------------
      * Get a boolean to determine if an account should be locked out due to
      * exceeded login attempts within a given period
      *
-     * @param     string, $identity
+     * @param     string , $identity
      * @return    boolean
      */
     public function isTimeLockedOut($identity)
@@ -1043,17 +1117,20 @@ class User
      */
     public function getLastAttemptTime($identity)
     {
-        if ($this->config->get('trackLoginAttempts')) {
+        if ($this->config->get('trackLoginAttempts'))
+        {
             $ipAddress = $this->_prepareIp($_SERVER['REMOTE_ADDR']);
 
             $this->db->select_max('time');
             $this->db->where('ip_address', $ipAddress);
-            if (strlen($identity) > 0) {
+            if (strlen($identity) > 0)
+            {
                 $this->db->or_where('login', $identity);
             }
             $qres = $this->db->get($this->tables['loginAttempts'], 1);
 
-            if (count($qres) > 0) {
+            if (count($qres) > 0)
+            {
                 return $qres->first()->time;
             }
         }
@@ -1072,13 +1149,17 @@ class User
     {
         $this->triggerEvents('users');
 
-        if (isset($this->_ionSelect) && !empty($this->_ionSelect)) {
-            foreach ($this->_ionSelect as $select) {
+        if (isset($this->_ionSelect) && !empty($this->_ionSelect))
+        {
+            foreach ($this->_ionSelect as $select)
+            {
                 $this->db->select($select);
             }
 
             $this->_ionSelect = array();
-        } else {
+        }
+        else
+        {
             //default selects
             $this->db->select(
                 array(
@@ -1090,14 +1171,17 @@ class User
         }
 
         //filter by group id(s) if passed
-        if (isset($groups)) {
+        if (isset($groups))
+        {
             //build an array if only one group was passed
-            if (is_numeric($groups)) {
+            if (is_numeric($groups))
+            {
                 $groups = Array($groups);
             }
 
             //join and then run a where_in against the group ids
-            if (isset($groups) && !empty($groups)) {
+            if (isset($groups) && !empty($groups))
+            {
                 $this->db->distinct();
                 $this->db->join(
                     $this->tables['usersGroups'],
@@ -1112,29 +1196,37 @@ class User
         $this->triggerEvents('extraWhere');
 
         //run each where that was passed
-        if (isset($this->_ionWhere) && !empty($this->_ionWhere)) {
-            foreach ($this->_ionWhere as $where) {
+        if (isset($this->_ionWhere) && !empty($this->_ionWhere))
+        {
+            foreach ($this->_ionWhere as $where)
+            {
                 $this->db->where($where);
             }
 
             $this->_ionWhere = array();
         }
 
-        if (isset($this->_ionLike) && !empty($this->_ionLike)) {
-            foreach ($this->_ionLike as $like) {
+        if (isset($this->_ionLike) && !empty($this->_ionLike))
+        {
+            foreach ($this->_ionLike as $like)
+            {
                 $this->db->orLike($like);
             }
 
             $this->_ionLike = array();
         }
 
-        if (isset($this->_ionLimit) && isset($this->_ionOffset)) {
+        if (isset($this->_ionLimit) && isset($this->_ionOffset))
+        {
             $this->db->take($this->_ionLimit, $this->_ionOffset);
 
             $this->_ionLimit = null;
             $this->_ionOffset = null;
-        } else {
-            if (isset($this->_ionLimit)) {
+        }
+        else
+        {
+            if (isset($this->_ionLimit))
+            {
                 $this->db->take($this->_ionLimit);
 
                 $this->_ionLimit = null;
@@ -1142,7 +1234,8 @@ class User
         }
 
         //set the order
-        if (isset($this->_ionOrderBy) && isset($this->_ionOrder)) {
+        if (isset($this->_ionOrderBy) && isset($this->_ionOrder))
+        {
             $this->db->order_by($this->_ionOrderBy, $this->_ionOrder);
 
             $this->_ionOrder = null;
@@ -1160,12 +1253,9 @@ class User
      * @return object
      * @author Ben Edmunds
      **/
-    public function find($id = null)
+    public function find($id)
     {
         $this->triggerEvents('user');
-
-        //if no id was passed use the current users id
-        $id || $id = $this->session->userdata('userId');
 
         $this->take(1);
         $this->where($this->tables['users'] . '.id', $id);
@@ -1176,25 +1266,23 @@ class User
     }
 
 
-
     /**
      * update
      *
      * @return bool
      * @author Phil Sturgeon
      **/
-    public function update($id, array $data)
+    public function update(array $data)
     {
         $this->triggerEvents('preUpdateUser');
-
-        $user = $this->user($id)->first();
 
         $this->db->trans_begin();
 
         if (array_key_exists($this->identityColumn, $data) && $this->identityCheck(
                 $data[$this->identityColumn]
             ) && $user->{$this->identityColumn} !== $data[$this->identityColumn]
-        ) {
+        )
+        {
             $this->db->trans_rollback();
             $this->setError('accountCreationDuplicate' . ucwords($this->identityColumn));
 
@@ -1211,11 +1299,16 @@ class User
                 'email',
                 $data
             )
-        ) {
-            if (array_key_exists('password', $data)) {
-                if (!empty($data['password'])) {
+        )
+        {
+            if (array_key_exists('password', $data))
+            {
+                if (!empty($data['password']))
+                {
                     $data['password'] = $this->hash_password($data['password'], $user->salt);
-                } else {
+                }
+                else
+                {
                     // unset password so it doesn't effect database entry if no password passed
                     unset($data['password']);
                 }
@@ -1225,7 +1318,8 @@ class User
         $this->triggerEvents('extraWhere');
         $this->db->update($this->tables['users'], $data, array('id' => $user->id));
 
-        if ($this->db->trans_status() === false) {
+        if ($this->db->trans_status() === false)
+        {
             $this->db->trans_rollback();
 
             $this->triggerEvents(array('postUpdateUser', 'postUpdateUserUnsuccessful'));
@@ -1246,7 +1340,7 @@ class User
      * @return bool
      * @author Phil Sturgeon
      **/
-    public function deleteUser($id)
+    public function delete($id)
     {
         $this->triggerEvents('preDeleteUser');
 
@@ -1259,11 +1353,13 @@ class User
         $affectedRows = $this->db->delete($this->tables['users'], array('id' => $id));
 
         // if user does not exist in database then it returns false else removes the user from groups
-        if ($affectedRows == 0) {
+        if ($affectedRows == 0)
+        {
             return false;
         }
 
-        if ($this->db->trans_status() === false) {
+        if ($this->db->trans_status() === false)
+        {
             $this->db->trans_rollback();
             $this->triggerEvents(array('postDeleteUser', 'postDeleteUserUnsuccessful'));
             $this->setError('deleteUnsuccessful');

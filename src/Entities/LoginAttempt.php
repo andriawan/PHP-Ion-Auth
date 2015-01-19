@@ -45,4 +45,30 @@ class LoginAttempt
         }
         return false;
     }
+
+    /**
+     * Function: getNumberOfAttempts()
+     * ------------------------------------------------------------------------------------
+     * Get number of attempts to login occured from given IP-address or identity
+     * Based on code from Tank Auth, by Ilya Konyukhov (https://github.com/ilkon/Tank-Auth)
+     *
+     * @param    string $identity
+     * @return    int
+     */
+    function getNumberOfAttempts(User $user)
+    {
+        if ($this->config->get('trackLoginAttempts')) {
+            $ipAddress = $this->_prepareIp($_SERVER['REMOTE_ADDR']);
+
+            $this->db->select('1', false);
+            $this->db->where('ip_address', $ipAddress);
+            if (strlen($identity) > 0) {
+                $this->db->or_where('login', $identity);
+            }
+
+            $qres = $this->db->get($this->tables['loginAttempts']);
+            return count($qres);
+        }
+        return 0;
+    }
 }
