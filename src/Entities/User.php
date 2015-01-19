@@ -2,7 +2,11 @@
 
 namespace IonAuth\IonAuth\Entities;
 
-class User
+use IonAuth\IonAuth\Helper;
+use IonAuth\IonAuth\Utilities\Collection\CollectionItem;
+use IonAuth\IonAuth\Utilities\Collection\GroupCollection;
+
+class User implements CollectionItem
 {
     /**
      * account status ('not_activated', etc ...)
@@ -11,6 +15,23 @@ class User
      **/
     protected $status;
 
+    private $email;
+    private $groups;
+    private $id;
+    private $last_name;
+    private $last_login;
+
+    function __construct()
+    {
+        $this->groups = GroupCollection::create([]);
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+
     /**
      * forgotten password feature
      *
@@ -18,7 +39,7 @@ class User
      * @return mixed  boolean / array
      * @author Mathew
      */
-    public function forgottenPassword($identity) // changed $email to $identity
+    public function forgottenPassword($identity)
     {
         if ($this->ionAuthModel->forgottenPassword($identity)) // changed
         {
@@ -188,117 +209,6 @@ class User
 
 
     /**
-     * register()
-     * -----------------------------
-     * @param $username , string
-     * @param $password , string
-     * @param $email , string
-     * @param array $additionalData
-     * @param array $groupIds
-     * @return void
-     * @author Mathew
-     */
-    public function register(
-        $username,
-        $password,
-        $email,
-        $additionalData = array(),
-        $groupIds = array()
-    ) // need to test email activation
-    {
-        $this->ionAuthModel->triggerEvents('preAccountCreation');
-
-        $emailActivation = $this->config->get('emailActivation');
-
-        if (!$emailActivation)
-        {
-            $id = $this->ionAuthModel->register($username, $password, $email, $additionalData, $groupIds);
-            if ($id !== false)
-            {
-                $this->setMessage('accountCreationSuccessful');
-                $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationSuccessful'));
-                return $id;
-            }
-            else
-            {
-                $this->setError('accountCreationUnsuccessful');
-                $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationUnsuccessful'));
-                return false;
-            }
-        }
-        else
-        {
-            $id = $this->ionAuthModel->register($username, $password, $email, $additionalData, $groupIds);
-
-            if (!$id)
-            {
-                $this->setError('accountCreationUnsuccessful');
-                return false;
-            }
-
-            $deactivate = $this->ionAuthModel->deactivate($id);
-
-            if (!$deactivate)
-            {
-                $this->setError('deactivateUnsuccessful');
-                $this->ionAuthModel->triggerEvents(array('postAccountCreation', 'postAccountCreationUnsuccessful'));
-                return false;
-            }
-
-            $activationCode = $this->ionAuthModel->activation_code;
-            $identity = $this->config->get('identity');
-            $user = $this->ionAuthModel->user($id)->row();
-
-            $data = array(
-                'identity' => $user->{$identity},
-                'id' => $user->id,
-                'email' => $email,
-                'activation' => $activationCode,
-            );
-
-            if (!$this->config->get('useDefaultEmail'))
-            {
-                $this->ionAuthModel->triggerEvents(
-                    array('postAccountCreation', 'postAccountCreationSuccessful', 'activationEmailSuccessful')
-                );
-                $this->setMessage('activationEmailSuccessful');
-                return $data;
-            }
-            else
-            {
-                $message = $this->load->view(
-                    $this->config->get('emailTemplates') . $this->config->get('emailActivate'),
-                    $data,
-                    true
-                );
-
-                $this->email->clear();
-                $this->email->from($this->config->get('adminEmail'), $this->config->get('siteTitle'));
-                $this->email->to($email);
-                $this->email->subject(
-                    $this->config->get('siteTitle') . ' - ' . $this->lang->line('emailActivationSubject')
-                );
-                $this->email->message($message);
-
-                if ($this->email->send() == true)
-                {
-                    $this->ionAuthModel->triggerEvents(
-                        array('postAccountCreation', 'postAccountCreationSuccessful', 'activationEmailSuccessful')
-                    );
-                    $this->setMessage('activationEmailSuccessful');
-                    return $id;
-                }
-            }
-
-            $this->ionAuthModel->triggerEvents(
-                array('postAccountCreation', 'postAccountCreationUnsuccessful', 'activationEmailUnsuccessful')
-            );
-            $this->setError('activationEmailUnsuccessful');
-            return false;
-        }
-    }
-
-    /**
      * logout()
      * --------------------
      * @return void
@@ -388,61 +298,13 @@ class User
      * in group
      * --------------------------
      * @param mixed group(s) to check
-     * @param bool user id
-     * @param bool check if all groups is present, or any of the groups
      *
      * @return bool
      * @author Phil Sturgeon
      **/
-    public function inGroup($checkGroup, $id = false, $checkAll = false)
+    public function inGroup(Group $group)
     {
-        $this->ionAuthModel->triggerEvents('inGroup');
-
-        $id || $id = $_SESSION['user_id'];
-
-        if (!is_array($checkGroup))
-        {
-            $checkGroup = array($checkGroup);
-        }
-
-        if (isset($this->_cacheUserInGroup[$id]))
-        {
-            $groups_array = $this->_cacheUserInGroup[$id];
-        }
-        else
-        {
-            $usersGroups = $this->ionAuthModel->getUsersGroups($id);
-            $groupsArray = array();
-            foreach ($usersGroups as $group)
-            {
-                $groupsArray[$group->id] = $group->name;
-            }
-            $this->_cacheUserInGroup[$id] = $groupsArray;
-        }
-
-        foreach ($checkGroup as $key => $value)
-        {
-            $groups = (is_string($value)) ? $groupsArray : array_keys($groupsArray);
-
-            /**
-             * if !all (default), in_array
-             * if all, !in_array
-             */
-            if (in_array($value, $groups) xor $checkAll)
-            {
-                /**
-                 * if !all (default), true
-                 * if all, false
-                 */
-                return !$checkAll;
-            }
-        }
-
-        /**
-         * if !all (default), false
-         * if all, true
-         */
-        return $checkAll;
+        return in_array($group->getID(), $this->groups->getKeys());
     }
 
 
@@ -883,98 +745,6 @@ class User
     }
 
     /**
-     * register
-     *
-     * @return bool
-     * @author Mathew
-     **/
-    public function _register($username, $password, $email, $additionalData = array(), $groups = array())
-    {
-        $this->triggerEvents('preRegister');
-
-        $manualActivation = $this->config->get('manual_activation');
-
-        if ($this->identityColumn == 'email' && $this->emailCheck($email))
-        {
-            $this->setError('accountCreationDuplicate_email');
-            return false;
-        }
-        elseif ($this->identityColumn == 'username' && $this->usernameCheck($username))
-        {
-            $this->setError('accountCreationDuplicateUsername');
-            return false;
-        }
-
-        // If username is taken, use username1 or username2, etc.
-        if ($this->identityColumn != 'username')
-        {
-            $originalUsername = $username;
-            for ($i = 0; $this->usernameCheck($username); $i++)
-            {
-                if ($i > 0)
-                {
-                    $username = $originalUsername . $i;
-                }
-            }
-        }
-
-        // IP Address
-        $ipAddress = $this->_prepareIp($_SERVER['REMOTE_ADDR']);
-        $salt = $this->storeSalt ? $this->salt() : false;
-        $password = $this->hashPassword($password, $salt);
-
-        // Users table.
-        $data = array(
-            'username' => $username,
-            'password' => $password,
-            'email' => $email,
-            'ip_address' => $ipAddress,
-            'created_on' => time(),
-            'last_login' => time(),
-            'active' => ($manualActivation === false ? 1 : 0)
-        );
-
-        if ($this->store_salt)
-        {
-            $data['salt'] = $salt;
-        }
-
-        //filter out any data passed that doesnt have a matching column in the users table
-        //and merge the set user data and the additional data
-        $userData = array_merge($this->_filterData($this->tables['users'], $additionalData), $data);
-
-        $this->triggerEvents('extraSet');
-
-        $this->db->insert($this->tables['users'], $userData);
-
-        $id = $this->db->insert_id();
-
-        if (!empty($groups))
-        {
-            //add to groups
-            foreach ($groups as $group)
-            {
-                $this->addToGroup($group, $id);
-            }
-        }
-
-        //add to default group if not already set
-        $defaultGroup = $this->where('name', $this->config->get('defaultGroup'))->group()->first();
-        if ((isset($defaultGroup->id) && !isset($groups)) || (empty($groups) && !in_array(
-                    $defaultGroup->id,
-                    $groups
-                ))
-        )
-        {
-            $this->addToGroup($defaultGroup->id, $id);
-        }
-
-        $this->triggerEvents('postRegister');
-
-        return (isset($id)) ? $id : false;
-    }
-
-    /**
      * login
      *
      * @return bool
@@ -1115,28 +885,6 @@ class User
      * @param    string $identity
      * @return    int
      */
-    public function getLastAttemptTime($identity)
-    {
-        if ($this->config->get('trackLoginAttempts'))
-        {
-            $ipAddress = $this->_prepareIp($_SERVER['REMOTE_ADDR']);
-
-            $this->db->select_max('time');
-            $this->db->where('ip_address', $ipAddress);
-            if (strlen($identity) > 0)
-            {
-                $this->db->or_where('login', $identity);
-            }
-            $qres = $this->db->get($this->tables['loginAttempts'], 1);
-
-            if (count($qres) > 0)
-            {
-                return $qres->first()->time;
-            }
-        }
-
-        return 0;
-    }
 
 
     /**
@@ -1250,7 +998,7 @@ class User
     /**
      * user
      *
-     * @return object
+     * @return IonAuth\IonAuth\Entities\User
      * @author Ben Edmunds
      **/
     public function find($id)
@@ -1265,18 +1013,17 @@ class User
         return $this;
     }
 
-
     /**
      * update
      *
      * @return bool
      * @author Phil Sturgeon
      **/
-    public function update(array $data)
+    public function update()
     {
-        $this->triggerEvents('preUpdateUser');
+//        $this->triggerEvents('preUpdateUser');
 
-        $this->db->trans_begin();
+//        $this->db->trans_begin();
 
         if (array_key_exists($this->identityColumn, $data) && $this->identityCheck(
                 $data[$this->identityColumn]
@@ -1340,23 +1087,18 @@ class User
      * @return bool
      * @author Phil Sturgeon
      **/
-    public function delete($id)
+    public function delete()
     {
         $this->triggerEvents('preDeleteUser');
 
-        //$this->db->trans_begin();
-
         // remove user from groups
-        $this->removeFromGroup(null, $id);
+        $this->groups->clear();
 
         // delete user from users table should be placed after remove from group
         $affectedRows = $this->db->delete($this->tables['users'], array('id' => $id));
 
-        // if user does not exist in database then it returns false else removes the user from groups
-        if ($affectedRows == 0)
-        {
-            return false;
-        }
+        if ($affectedRows == 0) return false;
+
 
         if ($this->db->trans_status() === false)
         {
@@ -1366,29 +1108,79 @@ class User
             return false;
         }
 
-        $this->db->trans_commit();
-
-        $this->triggerEvents(array('postDeleteUser', 'postDeleteUserSuccessful'));
-        $this->setMessage('deleteSuccessful');
+//        $this->triggerEvents(array('postDeleteUser', 'postDeleteUserSuccessful'));
+//        $this->setMessage('deleteSuccessful');
         return true;
     }
 
     /**
      * update_last_login
      *
-     * @return bool
      * @author Ben Edmunds
      **/
-    public function updateLastLogin($id)
+    public function updateLastLogin()
     {
-        $this->triggerEvents('updateLastLogin');
+//        $this->triggerEvents('updateLastLogin');
+//        $this->triggerEvents('extraWhere');
 
-        $this->triggerEvents('extraWhere');
+        $this->last_login = time();
 
-        $affectedRows = $this->db->table($this->config->get('tables')['users'])
-            ->where('id', '=', $id)
-            ->update(array('last_login' => time()));
+        return $this->last_login;
+    }
 
-        return $affectedRows == 1;
+    public function setEmail($email)
+    {
+        if (\IonAuth\IonAuth\Helper\validateEmail($email)) $this->email = $email;
+        else throw new \Exception('InvalidEmail');
+    }
+
+    public function getEmail()
+    {
+        return $this->email;
+    }
+
+    public function getGroups()
+    {
+        return $this->groups;
+    }
+
+    public function addGroup(Group $group)
+    {
+        $this->groups->add($group);
+    }
+
+    public function removeGroup(Group $group)
+    {
+        $this->groups->remove($group);
+    }
+
+    public function setFirstName($first_name)
+    {
+        $this->first_name = $first_name;
+    }
+
+    public function getFirstName()
+    {
+        return $this->first_name;
+    }
+
+    public function setLastName($last_name)
+    {
+        $this->last_name = $last_name;
+    }
+
+    public function getLastName()
+    {
+        return $this->last_name;
+    }
+
+    public function getFullName()
+    {
+        return $this->first_name . " " . $this->last_name;
+    }
+
+    public function getLastLogin()
+    {
+        return $this->last_login;
     }
 }
